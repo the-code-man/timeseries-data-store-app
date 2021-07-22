@@ -1,20 +1,30 @@
-import { HttpClientModule } from '@angular/common/http';
-import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
+import { NgModule } from '@angular/core';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
-import { TimeSeriesDataComponent } from './time-series-data/time-series-data.component';
+import { SourceSelectorComponent } from './components/source-selector/source-selector.component';
+import { RealTimeDataComponent } from './components/real-time-data/real-time-data.component';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatCardModule } from '@angular/material/card';
+import { HttpClientModule } from '@angular/common/http';
+import { MatTableModule } from '@angular/material/table';
 
 @NgModule({
   declarations: [
     AppComponent,
-    TimeSeriesDataComponent
+    SourceSelectorComponent,
+    RealTimeDataComponent
   ],
   imports: [
     BrowserModule,
+    AppRoutingModule,
+    BrowserAnimationsModule,
+    MatCardModule,
+    MatCheckboxModule,
     HttpClientModule,
-    AppRoutingModule
+    MatTableModule
   ],
   providers: [],
   bootstrap: [AppComponent]
