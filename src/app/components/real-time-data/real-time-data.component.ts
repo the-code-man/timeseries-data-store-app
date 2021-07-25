@@ -12,12 +12,13 @@ import { TimeSeriesDataService } from 'src/app/services/timeseries-data.service'
 })
 export class RealTimeDataComponent implements OnInit, OnDestroy, OnChanges {
   private aggrSub: Subscription;
-  private readonly indexColName = 'Index';
-  private aggregationTypes: string[] = ['Raw'];
+  private aggregationTypes: string[];
+  private readonly indexColName: string = 'Index';
+  private readonly subIdSeperator: string = '_';
 
-  displayedColumns: string[] = [this.indexColName];
-  displayTable: boolean = false;
-  subscribedSources: string[] = [];
+  displayedColumns: string[];
+  sourceDataSubs: string[];
+  displayTable: boolean;
   dataSource = [];
 
   @Output() onLogMessage = new EventEmitter<LogMessage>();
@@ -25,20 +26,26 @@ export class RealTimeDataComponent implements OnInit, OnDestroy, OnChanges {
 
   @ViewChild(MatTable) table: MatTable<string>;
 
-  constructor(private timeSeriesDataSvc: TimeSeriesDataService) { }
+  constructor(private timeSeriesDataSvc: TimeSeriesDataService) {
+    this.aggregationTypes = ['Raw'];
+    this.displayedColumns = [this.indexColName];
+    this.displayTable = false;
+    this.sourceDataSubs = [];
+    this.dataSource = [];
+  }
 
   ngOnInit(): void {
-    this.logMessage('Fetching supported aggregation types...', 'Info', 'RealTimeData');
+    this.logMessage('Fetching supported aggregation types...', 'Info');
 
     this.aggrSub = this.timeSeriesDataSvc.getSupportAggregationTypes().subscribe(s => {
       if (s.IsSuccess) {
         this.aggregationTypes.push(...s.Data);
-        this.logMessage(`Total supported aggregation types :${this.aggregationTypes.length}`, 'Info', 'RealTimeData');
+        this.logMessage(`Total supported aggregation types: ${this.aggregationTypes.length}`, 'Info');
       } else {
-        this.logMessage(`Error occured while fetching supported aggregation types. ${s.ErrorMessage}`, 'Error', 'RealTimeData');
+        this.logMessage(`Error occured while fetching supported aggregation types. ${s.ErrorMessage}`, 'Error');
       }
     }, error => {
-      this.logMessage(`Error occured while fetching supported aggregation types. ${error.message}`, 'Error', 'RealTimeData');
+      this.logMessage(`Error occured while fetching supported aggregation types. ${error.message}`, 'Error');
     });
   }
 
@@ -46,21 +53,22 @@ export class RealTimeDataComponent implements OnInit, OnDestroy, OnChanges {
     try {
       if (changes.sourceSubChange) {
         var ssc: SourceSubscriptionChange = changes.sourceSubChange.currentValue;
-  
+
         if (ssc?.subscribe) {
-          this.displayedColumns.push(...this.aggregationTypes.map(a => `${ssc.source}_${a}`));
+          this.displayedColumns.push(...this.aggregationTypes.map(a => `${ssc.source}${this.subIdSeperator}${a}`));
         } else {
           this.displayedColumns = this.displayedColumns.filter(c => !c.startsWith(ssc.source) || c == this.indexColName);
+          this.stopDataSubscription(this.sourceDataSubs.filter(c => c.startsWith(ssc.source)));
         }
-  
+
         this.displayTable = this.displayedColumns.length > 1;
         if (this.displayTable) {
           this.table.renderRows();
         }
-      }      
+      }
     }
     catch {
-      // EATING THE EXCEPTION. FOR SOME REASON AN EXCEPTION OCCURS INTERMITTENTLY
+      // EATING THE EXCEPTION. FOR SOME REASON AN EXCEPTION OCCURS INTERMITTENTLY DURING LOAD
     }
   }
 
@@ -69,14 +77,34 @@ export class RealTimeDataComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   onDataSubToggle(ob: MatCheckboxChange) {
-
+    if (ob.checked) {
+      this.startDataSubscription([ob.source.id]);
+    } else {
+      this.stopDataSubscription([ob.source.id]);
+    }
   }
 
-  private logMessage(message: string, messageType: string, component: string) {
+  isSubscribed(dataSourceId: string): boolean {
+    return this.sourceDataSubs.indexOf(dataSourceId, 0) > -1;
+  }
+
+  private startDataSubscription(dataSourceIds: string[]) {
+    this.logMessage(`Starting data subscription for ${dataSourceIds}`, 'Info');
+    this.sourceDataSubs.push(...dataSourceIds);
+  }
+
+  private stopDataSubscription(dataSourceIds: string[]) {
+    for (const dsId in dataSourceIds) {
+      this.logMessage(`Stopping data subscription for ${dataSourceIds}`, 'Info');
+      this.sourceDataSubs.splice(this.sourceDataSubs.indexOf(dsId, 0), 1);
+    }
+  }
+
+  private logMessage(message: string, messageType: string) {
     this.onLogMessage.emit({
       message: message,
       messageType: messageType,
-      component: component
+      component: 'RealTimeData'
     });
   }
 }

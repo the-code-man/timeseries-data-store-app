@@ -20,18 +20,18 @@ export class SourceSelectorComponent implements OnInit, OnDestroy {
   constructor(private timeSeriesDataSvc: TimeSeriesDataService) { }
 
   ngOnInit(): void {
-    this.logMessage('Fetching Timeseries sources...', 'Info', 'SourceSelector');
+    this.logMessage('Fetching Timeseries sources...', 'Info');
 
     this.sourceSub = this.timeSeriesDataSvc.getSources().subscribe(result => {
-      this.logMessage('Successfully loaded time series sources', 'Info', 'SourceSelector');
+      this.logMessage('Successfully loaded time series sources', 'Info');
       if (result.IsSuccess) {
         this.sourceOptions = result.Data;
-        this.logMessage(`Total sources: ${this.sourceOptions.length}`, 'Info', 'SourceSelector');
+        this.logMessage(`Total sources: ${this.sourceOptions.length}`, 'Info');
       } else {
-        this.logMessage(`Error while accessing api. ${result.ErrorMessage}`, 'Error', 'SourceSelector');
+        this.logMessage(`Error while accessing api. ${result.ErrorMessage}`, 'Error');
       }
     }, err => {
-      this.logMessage(`Api is inaccessible. ${err.message}`, 'Error', 'SourceSelector');
+      this.logMessage(`Api is inaccessible. ${err.message}`, 'Error');
     });
   }
 
@@ -47,11 +47,11 @@ export class SourceSelectorComponent implements OnInit, OnDestroy {
       });
   }
 
-  private logMessage(message: string, messageType: string, component: string) {
+  private logMessage(message: string, messageType: string) {
     this.onLogMessage.emit({
       message: message,
       messageType: messageType,
-      component: component
+      component: 'SourceSelector'
     });
   }
 }

@@ -5,7 +5,8 @@
       <table mat-table [dataSource]="dataSource" class="mat-elevation-z8" *ngIf="displayTable">
         <ng-container *ngFor="let col of displayedColumns; let i=index" [matColumnDef]="col">
           <th mat-header-cell *matHeaderCellDef>
-            <mat-checkbox [id]="displayedColumns[i]" (change)="onDataSubToggle($event)" class="example-margin"
+            <mat-checkbox [id]="displayedColumns[i]" (change)="onDataSubToggle($event)"
+              [checked]="isSubscribed(displayedColumns[i])" class="example-margin"
               *ngIf="displayedColumns[i] != indexColName">
               {{displayedColumns[i]}} </mat-checkbox>
             <span *ngIf="displayedColumns[i] == indexColName">{{displayedColumns[i]}}</span>

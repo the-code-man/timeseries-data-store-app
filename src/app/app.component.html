@@ -1,7 +1,9 @@
-<div class="card">
+<div class="h-align">
   <div style="width: 50%;">
-    <app-source-selector (onLogMessage)="newLogMessage($event)"
-      (onSourceSubscriptionChange)="sourceSubscriptionChanged($event)"></app-source-selector>
+    <app-source-selector 
+      (onLogMessage)="newLogMessage($event)"
+      (onSourceSubscriptionChange)="sourceSubscriptionChanged($event)">
+    </app-source-selector>
   </div>
   <div style="width: 50%;">
     <app-logger [message]="logMessage"></app-logger>
@@ -10,6 +12,8 @@
 <div class="spacer">
 </div>
 <div>
-  <app-real-time-data (onLogMessage)="newLogMessage($event)" [sourceSubChange]="sourceSubscriptionChange">
+  <app-real-time-data 
+    (onLogMessage)="newLogMessage($event)" 
+    [sourceSubChange]="sourceSubscriptionChange">
   </app-real-time-data>
 </div>
