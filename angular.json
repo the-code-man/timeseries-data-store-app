@@ -69,7 +69,9 @@
           "options": {
             "browserTarget": "timeseries-data-store-app:build",
             "sourceMap": {
-              "scripts": true
+              "scripts": true, 
+              "styles": true,
+              "vendor": true
             }
           },
           "configurations": {

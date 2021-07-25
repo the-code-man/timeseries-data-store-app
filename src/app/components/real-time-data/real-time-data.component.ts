@@ -1,8 +1,12 @@
-import { Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges, ViewChild } from '@angular/core';
+import {
+  Component, EventEmitter, Input, OnChanges, OnDestroy,
+  OnInit, Output, SimpleChanges, ViewChild
+} from '@angular/core';
 import { MatCheckboxChange } from '@angular/material/checkbox';
 import { MatTable } from '@angular/material/table';
 import { Subscription } from 'rxjs';
 import { LogMessage, SourceSubscriptionChange } from 'src/app/model/log-message';
+import { RealTimeDataService } from 'src/app/services/realtime-data.service';
 import { TimeSeriesDataService } from 'src/app/services/timeseries-data.service';
 
 @Component({
@@ -13,6 +17,7 @@ import { TimeSeriesDataService } from 'src/app/services/timeseries-data.service'
 export class RealTimeDataComponent implements OnInit, OnDestroy, OnChanges {
   private aggrSub: Subscription;
   private aggregationTypes: string[];
+  private connected: boolean;
   private readonly indexColName: string = 'Index';
   private readonly subIdSeperator: string = '_';
 
@@ -26,12 +31,14 @@ export class RealTimeDataComponent implements OnInit, OnDestroy, OnChanges {
 
   @ViewChild(MatTable) table: MatTable<string>;
 
-  constructor(private timeSeriesDataSvc: TimeSeriesDataService) {
+  constructor(private timeSeriesDataSvc: TimeSeriesDataService,
+    private realTimeDataSvc: RealTimeDataService) {
     this.aggregationTypes = ['Raw'];
     this.displayedColumns = [this.indexColName];
     this.displayTable = false;
     this.sourceDataSubs = [];
     this.dataSource = [];
+    this.connected = false;
   }
 
   ngOnInit(): void {
@@ -47,6 +54,8 @@ export class RealTimeDataComponent implements OnInit, OnDestroy, OnChanges {
     }, error => {
       this.logMessage(`Error occured while fetching supported aggregation types. ${error.message}`, 'Error');
     });
+
+    this.realTimeDataSvc.connect().subscribe(success => this.connected = success);
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -58,7 +67,11 @@ export class RealTimeDataComponent implements OnInit, OnDestroy, OnChanges {
           this.displayedColumns.push(...this.aggregationTypes.map(a => `${ssc.source}${this.subIdSeperator}${a}`));
         } else {
           this.displayedColumns = this.displayedColumns.filter(c => !c.startsWith(ssc.source) || c == this.indexColName);
-          this.stopDataSubscription(this.sourceDataSubs.filter(c => c.startsWith(ssc.source)));
+          this.sourceDataSubs.map(s => {
+            if (s.startsWith(ssc.source)) {
+              this.stopDataSubscription(s);
+            }
+          });
         }
 
         this.displayTable = this.displayedColumns.length > 1;
@@ -74,13 +87,14 @@ export class RealTimeDataComponent implements OnInit, OnDestroy, OnChanges {
 
   ngOnDestroy(): void {
     this.aggrSub.unsubscribe();
+    this.realTimeDataSvc.disconnect();
   }
 
   onDataSubToggle(ob: MatCheckboxChange) {
     if (ob.checked) {
-      this.startDataSubscription([ob.source.id]);
+      this.startDataSubscription(ob.source.id);
     } else {
-      this.stopDataSubscription([ob.source.id]);
+      this.stopDataSubscription(ob.source.id);
     }
   }
 
@@ -88,15 +102,33 @@ export class RealTimeDataComponent implements OnInit, OnDestroy, OnChanges {
     return this.sourceDataSubs.indexOf(dataSourceId, 0) > -1;
   }
 
-  private startDataSubscription(dataSourceIds: string[]) {
-    this.logMessage(`Starting data subscription for ${dataSourceIds}`, 'Info');
-    this.sourceDataSubs.push(...dataSourceIds);
+  private startDataSubscription(dataSourceId: string) {
+    if (this.connected) {
+      let dsIdSplit = dataSourceId.split(this.subIdSeperator);
+      this.realTimeDataSvc.startSubscription(dsIdSplit[0], dsIdSplit[1]).subscribe(success => {
+        if (success) {
+          this.sourceDataSubs.push(dataSourceId);
+        } else {
+          this.logMessage(`Please try again later. Unable to start subscription for ${dataSourceId}`, 'Info');
+        }
+      });
+    } else {
+      this.logMessage('Unable to subscribe as signalr connection is not established yet.', 'Warn');
+    }
   }
 
-  private stopDataSubscription(dataSourceIds: string[]) {
-    for (const dsId in dataSourceIds) {
-      this.logMessage(`Stopping data subscription for ${dataSourceIds}`, 'Info');
-      this.sourceDataSubs.splice(this.sourceDataSubs.indexOf(dsId, 0), 1);
+  private stopDataSubscription(dataSourceId: string) {
+    let dataSourceSubIndex = this.sourceDataSubs.indexOf(dataSourceId, 0);
+
+    if (dataSourceSubIndex > -1) {
+      let dsIdSplit = dataSourceId.split(this.subIdSeperator);
+      this.realTimeDataSvc.stopSubscription(dsIdSplit[0], dsIdSplit[1]).subscribe(success => {
+        if (success) {
+          this.sourceDataSubs.splice(dataSourceSubIndex, 1);
+        } else {
+          this.logMessage(`Please try again later. Unable to stop subscription for ${dataSourceId}`, 'Info');
+        }
+      });
     }
   }
 

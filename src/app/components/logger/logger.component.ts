@@ -1,30 +1,40 @@
-import { Component, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
+import { Component, Input, OnChanges, OnDestroy, OnInit, SimpleChanges } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { LogMessage, LOG_MESSAGE_SEPERATOR } from 'src/app/model/log-message';
+import { RealTimeDataService } from 'src/app/services/realtime-data.service';
 
 @Component({
   selector: 'app-logger',
   templateUrl: './logger.component.html',
   styleUrls: ['./logger.component.scss']
 })
-export class LoggerComponent implements OnInit, OnChanges {
+export class LoggerComponent implements OnInit, OnChanges, OnDestroy {
+  private newLogMessageSub: Subscription;
   @Input() message: LogMessage;
+
   internalMessage: string = '';
 
-  constructor() {
+  constructor(private realTimeDataSvc: RealTimeDataService) {
     this.logMessage(
       {
         message: 'Logging initialized!',
         messageType: 'Init',
         component: 'Logger'
       });
+
+    this.newLogMessageSub = this.realTimeDataSvc.newLogMessage.subscribe(msg => this.logMessage(msg));
   }
-  ngOnInit(): void {
-  }
+
+  ngOnInit(): void { }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes.message) {
       this.logMessage(changes.message.currentValue);
     }
+  }
+
+  ngOnDestroy(): void {
+    this.newLogMessageSub.unsubscribe();
   }
 
   private logMessage(message: LogMessage) {
