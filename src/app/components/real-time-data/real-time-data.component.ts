@@ -1,37 +1,82 @@
-import { Component, OnInit } from '@angular/core';
-
-export interface PeriodicElement {
-  name: string;
-  position: number;
-  weight: number;
-  symbol: string;
-}
-
-const ELEMENT_DATA: PeriodicElement[] = [
-  {position: 1, name: 'Hydrogen', weight: 1.0079, symbol: 'H'},
-  {position: 2, name: 'Helium', weight: 4.0026, symbol: 'He'},
-  {position: 3, name: 'Lithium', weight: 6.941, symbol: 'Li'},
-  {position: 4, name: 'Beryllium', weight: 9.0122, symbol: 'Be'},
-  {position: 5, name: 'Boron', weight: 10.811, symbol: 'B'},
-  {position: 6, name: 'Carbon', weight: 12.0107, symbol: 'C'},
-  {position: 7, name: 'Nitrogen', weight: 14.0067, symbol: 'N'},
-  {position: 8, name: 'Oxygen', weight: 15.9994, symbol: 'O'},
-  {position: 9, name: 'Fluorine', weight: 18.9984, symbol: 'F'},
-  {position: 10, name: 'Neon', weight: 20.1797, symbol: 'Ne'},
-];
+import { Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges, ViewChild } from '@angular/core';
+import { MatCheckboxChange } from '@angular/material/checkbox';
+import { MatTable } from '@angular/material/table';
+import { Subscription } from 'rxjs';
+import { LogMessage, SourceSubscriptionChange } from 'src/app/model/log-message';
+import { TimeSeriesDataService } from 'src/app/services/timeseries-data.service';
 
 @Component({
   selector: 'app-real-time-data',
   templateUrl: './real-time-data.component.html',
   styleUrls: ['./real-time-data.component.scss']
 })
-export class RealTimeDataComponent implements OnInit {
-  displayedColumns: string[] = ['position', 'name', 'weight', 'symbol'];
-  dataSource = ELEMENT_DATA;
-  constructor() { }
+export class RealTimeDataComponent implements OnInit, OnDestroy, OnChanges {
+  private aggrSub: Subscription;
+  private readonly indexColName = 'Index';
+  private aggregationTypes: string[] = ['Raw'];
 
+  displayedColumns: string[] = [this.indexColName];
+  displayTable: boolean = false;
+  subscribedSources: string[] = [];
+  dataSource = [];
+
+  @Output() onLogMessage = new EventEmitter<LogMessage>();
+  @Input() sourceSubChange: SourceSubscriptionChange;
+
+  @ViewChild(MatTable) table: MatTable<string>;
+
+  constructor(private timeSeriesDataSvc: TimeSeriesDataService) { }
 
   ngOnInit(): void {
+    this.logMessage('Fetching supported aggregation types...', 'Info', 'RealTimeData');
+
+    this.aggrSub = this.timeSeriesDataSvc.getSupportAggregationTypes().subscribe(s => {
+      if (s.IsSuccess) {
+        this.aggregationTypes.push(...s.Data);
+        this.logMessage(`Total supported aggregation types :${this.aggregationTypes.length}`, 'Info', 'RealTimeData');
+      } else {
+        this.logMessage(`Error occured while fetching supported aggregation types. ${s.ErrorMessage}`, 'Error', 'RealTimeData');
+      }
+    }, error => {
+      this.logMessage(`Error occured while fetching supported aggregation types. ${error.message}`, 'Error', 'RealTimeData');
+    });
   }
 
+  ngOnChanges(changes: SimpleChanges): void {
+    try {
+      if (changes.sourceSubChange) {
+        var ssc: SourceSubscriptionChange = changes.sourceSubChange.currentValue;
+  
+        if (ssc?.subscribe) {
+          this.displayedColumns.push(...this.aggregationTypes.map(a => `${ssc.source}_${a}`));
+        } else {
+          this.displayedColumns = this.displayedColumns.filter(c => !c.startsWith(ssc.source) || c == this.indexColName);
+        }
+  
+        this.displayTable = this.displayedColumns.length > 1;
+        if (this.displayTable) {
+          this.table.renderRows();
+        }
+      }      
+    }
+    catch {
+      // EATING THE EXCEPTION. FOR SOME REASON AN EXCEPTION OCCURS INTERMITTENTLY
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.aggrSub.unsubscribe();
+  }
+
+  onDataSubToggle(ob: MatCheckboxChange) {
+
+  }
+
+  private logMessage(message: string, messageType: string, component: string) {
+    this.onLogMessage.emit({
+      message: message,
+      messageType: messageType,
+      component: component
+    });
+  }
 }

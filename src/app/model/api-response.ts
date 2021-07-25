@@ -1,4 +1,4 @@
-export class ApiResponse<T> {
+export interface ApiResponse<T> {
     Data: T;
     IsSuccess: boolean;
     ErrorMessage: string;

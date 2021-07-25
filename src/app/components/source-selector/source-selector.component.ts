@@ -1,5 +1,7 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, EventEmitter, OnDestroy, OnInit, Output } from '@angular/core';
+import { MatCheckboxChange } from '@angular/material/checkbox';
 import { Subscription } from 'rxjs';
+import { LogMessage, SourceSubscriptionChange } from 'src/app/model/log-message';
 import { TimeSeriesDataService } from 'src/app/services/timeseries-data.service';
 
 @Component({
@@ -11,24 +13,25 @@ export class SourceSelectorComponent implements OnInit, OnDestroy {
   private sourceSub: Subscription;
 
   sourceOptions: string[] = [];
-  message: string = 'Init: Welcome!';
 
-  constructor(private timeSeriesDataService: TimeSeriesDataService) {
-  }
+  @Output() onLogMessage = new EventEmitter<LogMessage>();
+  @Output() onSourceSubscriptionChange = new EventEmitter<SourceSubscriptionChange>();
+
+  constructor(private timeSeriesDataSvc: TimeSeriesDataService) { }
 
   ngOnInit(): void {
-    this.logMessages("Fetching Timeseries sources...", "Info");
+    this.logMessage('Fetching Timeseries sources...', 'Info', 'SourceSelector');
 
-    this.sourceSub = this.timeSeriesDataService.getSources().subscribe(result => {
-      this.logMessages("Successfully loaded time series sources", "Info");
+    this.sourceSub = this.timeSeriesDataSvc.getSources().subscribe(result => {
+      this.logMessage('Successfully loaded time series sources', 'Info', 'SourceSelector');
       if (result.IsSuccess) {
         this.sourceOptions = result.Data;
-        this.logMessages(`Total sources: ${this.sourceOptions.length}`, "Info");
+        this.logMessage(`Total sources: ${this.sourceOptions.length}`, 'Info', 'SourceSelector');
       } else {
-        this.logMessages(`Error while accessing api. ${result.ErrorMessage}`, "Error");
+        this.logMessage(`Error while accessing api. ${result.ErrorMessage}`, 'Error', 'SourceSelector');
       }
     }, err => {
-      this.logMessages(`Api is inaccessible. ${err.message}`, "Error");
+      this.logMessage(`Api is inaccessible. ${err.message}`, 'Error', 'SourceSelector');
     });
   }
 
@@ -36,7 +39,19 @@ export class SourceSelectorComponent implements OnInit, OnDestroy {
     this.sourceSub.unsubscribe();
   }
 
-  private logMessages(message: string, messageType: string) {
-    this.message += '\r\n' + messageType + ": " + message;
+  onSourceChange(ob: MatCheckboxChange) {
+    this.onSourceSubscriptionChange.emit(
+      {
+        source: ob.source.id,
+        subscribe: ob.checked
+      });
+  }
+
+  private logMessage(message: string, messageType: string, component: string) {
+    this.onLogMessage.emit({
+      message: message,
+      messageType: messageType,
+      component: component
+    });
   }
 }

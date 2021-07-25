@@ -10,12 +10,14 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatCardModule } from '@angular/material/card';
 import { HttpClientModule } from '@angular/common/http';
 import { MatTableModule } from '@angular/material/table';
+import { LoggerComponent } from './components/logger/logger.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     SourceSelectorComponent,
-    RealTimeDataComponent
+    RealTimeDataComponent,
+    LoggerComponent
   ],
   imports: [
     BrowserModule,

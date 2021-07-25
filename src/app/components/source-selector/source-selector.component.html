@@ -1,19 +1,12 @@
-<div class="card">
+<div style="width: 100%;">
     <mat-card>
         <mat-card-content>
             <h2 class="example-h2">Timeseries Sources (Select one or more to start realtime data streaming)</h2>
             <section class="example-section">
-                <mat-checkbox *ngFor="let sourceOption of sourceOptions" class="example-margin">{{ sourceOption }}
+                <mat-checkbox *ngFor="let sourceOption of sourceOptions" [id]="sourceOption"
+                    (change)="onSourceChange($event)" class="example-margin">
+                    {{ sourceOption }}
                 </mat-checkbox>
-            </section>
-        </mat-card-content>
-    </mat-card>
-    <div class="spacer"></div>
-    <mat-card>
-        <mat-card-content>
-            <h2 class="example-h2">Logs</h2>
-            <section>
-                <textarea #txtLogMessage [scrollTop]="txtLogMessage.scrollHeight" readonly>{{ message }}</textarea>
             </section>
         </mat-card-content>
     </mat-card>

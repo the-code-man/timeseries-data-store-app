@@ -67,7 +67,10 @@
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
-            "browserTarget": "timeseries-data-store-app:build"
+            "browserTarget": "timeseries-data-store-app:build",
+            "sourceMap": {
+              "scripts": true
+            }
           },
           "configurations": {
             "production": {
