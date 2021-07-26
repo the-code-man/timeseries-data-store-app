@@ -33,7 +33,7 @@ export class RealTimeDataComponent implements OnInit, OnDestroy, OnChanges {
 
   constructor(private timeSeriesDataSvc: TimeSeriesDataService,
     private realTimeDataSvc: RealTimeDataService) {
-    this.aggregationTypes = ['Raw'];
+    this.aggregationTypes = [];
     this.displayedColumns = [this.indexColName];
     this.displayTable = false;
     this.sourceDataSubs = [];
@@ -105,6 +105,28 @@ export class RealTimeDataComponent implements OnInit, OnDestroy, OnChanges {
   private startDataSubscription(dataSourceId: string) {
     if (this.connected) {
       let dsIdSplit = dataSourceId.split(this.subIdSeperator);
+
+      if (dsIdSplit[1] == 'Raw') {
+        this.timeSeriesDataSvc.getLatestRawData(dsIdSplit[0]).subscribe(response => {
+          if (response.IsSuccess && response.Data.Values.length > 0) {
+            let dataRow = {};
+            dataRow[this.indexColName] = response.Data.Time;
+            dataRow[dataSourceId] = response.Data.Values;
+            this.dataSource.push(dataRow);
+            this.table.renderRows();
+          } else {
+            this.logMessage(`${dataSourceId} does not have any realtime data yet`, 'Info');
+          }
+        });
+      } else {
+        this.timeSeriesDataSvc.getLatestAggrData(dsIdSplit[0], dsIdSplit[1]).subscribe(response => {
+          let dataRow = {};
+          dataRow[this.indexColName] = response.Data.Time;
+          dataRow[dataSourceId] = response.Data.Value;
+          this.dataSource.push(dataRow);
+        });
+      }
+
       this.realTimeDataSvc.startSubscription(dsIdSplit[0], dsIdSplit[1]).subscribe(success => {
         if (success) {
           this.sourceDataSubs.push(dataSourceId);

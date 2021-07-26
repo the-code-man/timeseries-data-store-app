@@ -21,11 +21,11 @@ export class TimeSeriesDataService {
         return this.http.get<ApiResponse<string[]>>(`${this.readAPI}/aggregationtypes`);
     }
 
-    getLatest(source: string, aggregationType?: string) {
-        if (aggregationType == null) {
-            return this.http.get<ApiResponse<RawTimeSeries>>(`${this.readAPI}/${source}/getlatest`)
-        } else {
-            return this.http.get<ApiResponse<AggrTimeSeries>>(`${this.aggrReadAPI}/${source}/getlatest?aggregationType=${aggregationType}`)
-        }
+    getLatestRawData(source: string) {
+        return this.http.get<ApiResponse<RawTimeSeries>>(`${this.readAPI}/${source}/getlatest`)
+    }
+
+    getLatestAggrData(source: string, aggregationType: string) {
+        return this.http.get<ApiResponse<AggrTimeSeries>>(`${this.aggrReadAPI}/${source}/getlatest?aggregationType=${aggregationType}`)
     }
 }

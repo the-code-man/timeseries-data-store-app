@@ -3,6 +3,7 @@ import * as signalR from '@microsoft/signalr';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { LogMessage } from '../model/log-message';
+import { AggregationType, AggrTimeSeries, RawTimeSeries } from '../model/time-series';
 
 @Injectable({
     providedIn: 'root',
@@ -37,8 +38,12 @@ export class RealTimeDataService {
                     .withUrl(`${environment.apiBaseUrl}/realtime`)
                     .build();
 
-                this.signalRConn.on('OnProcessed', (arg1, arg2) => {
-                    console.log(`${arg1} --- ${arg2}`);
+                this.signalRConn.on('OnRawProcessed', (arg1) => {
+                    console.log(`${arg1[0].Time} --- ${arg1[0].Values}`);
+                });
+
+                this.signalRConn.on('OnAggrProcessed', (arg1: AggrTimeSeries[], agrType: AggregationType) => {
+                    console.log(`${arg1[0].Time} --- ${arg1[0].Value} --- ${agrType}`);
                 });
 
                 this.signalRConn.start()

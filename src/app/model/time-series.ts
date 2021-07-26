@@ -5,5 +5,13 @@ export interface RawTimeSeries {
 
 export interface AggrTimeSeries {
     Time: Date;
-    Values: number;
+    Value: number;
+}
+
+export enum AggregationType
+{
+    Raw = 0,
+    Avg,
+    Min,
+    Max
 }
