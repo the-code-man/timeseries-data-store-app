@@ -3,7 +3,7 @@ import * as signalR from '@microsoft/signalr';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { LogMessage } from '../model/log-message';
-import { AggregationType, AggrTimeSeries, RawTimeSeries } from '../model/time-series';
+import { AggregationType, MultiValueTimeSeries, RealtimeEvent } from '../model/time-series';
 
 @Injectable({
     providedIn: 'root',
@@ -13,6 +13,7 @@ export class RealTimeDataService {
     private connected: boolean;
 
     newLogMessage: BehaviorSubject<LogMessage>;
+    onDataReceived: BehaviorSubject<RealtimeEvent>;
 
     constructor() {
         this.newLogMessage = new BehaviorSubject<LogMessage>(
@@ -21,6 +22,8 @@ export class RealTimeDataService {
                 message: 'Realtime data service initialized!',
                 component: 'RealTimeDataService'
             });
+
+        this.onDataReceived = new BehaviorSubject<RealtimeEvent>(null);
 
         this.connected = false;
     }
@@ -38,12 +41,13 @@ export class RealTimeDataService {
                     .withUrl(`${environment.apiBaseUrl}/realtime`)
                     .build();
 
-                this.signalRConn.on('OnRawProcessed', (arg1) => {
-                    console.log(`${arg1[0].Time} --- ${arg1[0].Values}`);
-                });
-
-                this.signalRConn.on('OnAggrProcessed', (arg1: AggrTimeSeries[], agrType: AggregationType) => {
-                    console.log(`${arg1[0].Time} --- ${arg1[0].Value} --- ${agrType}`);
+                this.signalRConn.on('OnRealtimeDataReceived', (source: string, aggrType: AggregationType, data: MultiValueTimeSeries[]) => {
+                    this.logMessage(`New data received for '${source}' with aggregation '${AggregationType[aggrType]}'`, 'Info');
+                    this.onDataReceived.next({
+                        Source: source,
+                        AggrType: aggrType,
+                        Data: data
+                    });
                 });
 
                 this.signalRConn.start()
@@ -85,18 +89,13 @@ export class RealTimeDataService {
     startSubscription(dataSource: string, aggregationType: string): Observable<boolean> {
         let subject = new Subject<boolean>();
 
-        this.signalRConn.send("Subscribe",
-            [{
-                Source: dataSource,
-                AggregationType: aggregationType
-            }]).then(_ => {
-                this.logMessage(`Successfully subscribed to '${dataSource}', with aggregation type as '${aggregationType}'.`, 'Info');
-                subject.next(true);
-            })
-            .catch(err => {
-                this.logMessage(`Error occured while subscribing to '${dataSource}', with aggregation type as '${aggregationType}'. ${err}`, 'Error');
-                subject.next(false);
-            });
+        this.signalRConn.send("Subscribe", dataSource, aggregationType).then(_ => {
+            this.logMessage(`Successfully subscribed to '${dataSource}', with aggregation type as '${aggregationType}'.`, 'Info');
+            subject.next(true);
+        }).catch(err => {
+            this.logMessage(`Error occured while subscribing to '${dataSource}', with aggregation type as '${aggregationType}'. ${err}`, 'Error');
+            subject.next(false);
+        });
 
         return subject;
     }
@@ -104,18 +103,13 @@ export class RealTimeDataService {
     stopSubscription(dataSource: string, aggregationType: string): Observable<boolean> {
         let subject = new Subject<boolean>();
 
-        this.signalRConn.send("Unsubscribe",
-            [{
-                Source: dataSource,
-                AggregationType: aggregationType
-            }]).then(_ => {
-                this.logMessage(`Successfully removed subscription for '${dataSource}', with aggregation type as '${aggregationType}'.`, 'Info');
-                subject.next(true);
-            })
-            .catch(err => {
-                this.logMessage(`Error occurred while removing subscription for '${dataSource}', with aggregation type as '${aggregationType}'. ${err}`, 'Error');
-                subject.next(false);
-            });
+        this.signalRConn.send("Unsubscribe", dataSource, aggregationType).then(_ => {
+            this.logMessage(`Successfully removed subscription for '${dataSource}', with aggregation type as '${aggregationType}'.`, 'Info');
+            subject.next(true);
+        }).catch(err => {
+            this.logMessage(`Error occurred while removing subscription for '${dataSource}', with aggregation type as '${aggregationType}'. ${err}`, 'Error');
+            subject.next(false);
+        });
 
         return subject;
     }

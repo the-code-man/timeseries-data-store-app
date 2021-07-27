@@ -6,6 +6,7 @@ import { MatCheckboxChange } from '@angular/material/checkbox';
 import { MatTable } from '@angular/material/table';
 import { Subscription } from 'rxjs';
 import { LogMessage, SourceSubscriptionChange } from 'src/app/model/log-message';
+import { AggregationType, MultiValueTimeSeries, SingleValueTimeSeries } from 'src/app/model/time-series';
 import { RealTimeDataService } from 'src/app/services/realtime-data.service';
 import { TimeSeriesDataService } from 'src/app/services/timeseries-data.service';
 
@@ -16,6 +17,8 @@ import { TimeSeriesDataService } from 'src/app/services/timeseries-data.service'
 })
 export class RealTimeDataComponent implements OnInit, OnDestroy, OnChanges {
   private aggrSub: Subscription;
+  private signalRSub: Subscription;
+  private realtimeDataSub: Subscription;
   private aggregationTypes: string[];
   private connected: boolean;
   private readonly indexColName: string = 'Index';
@@ -55,7 +58,15 @@ export class RealTimeDataComponent implements OnInit, OnDestroy, OnChanges {
       this.logMessage(`Error occured while fetching supported aggregation types. ${error.message}`, 'Error');
     });
 
-    this.realTimeDataSvc.connect().subscribe(success => this.connected = success);
+    this.signalRSub = this.realTimeDataSvc.connect()
+      .subscribe(success => this.connected = success);
+
+    this.realtimeDataSub = this.realTimeDataSvc.onDataReceived
+      .subscribe(realtimeEvent => {
+        if (realtimeEvent) {
+          this.dataReceived(realtimeEvent.Data[0], `${realtimeEvent.Source}${this.subIdSeperator}${AggregationType[realtimeEvent.AggrType]}`)
+        }
+      })
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -88,6 +99,9 @@ export class RealTimeDataComponent implements OnInit, OnDestroy, OnChanges {
   ngOnDestroy(): void {
     this.aggrSub.unsubscribe();
     this.realTimeDataSvc.disconnect();
+
+    this.signalRSub.unsubscribe();
+    this.realtimeDataSub.unsubscribe();
   }
 
   onDataSubToggle(ob: MatCheckboxChange) {
@@ -109,21 +123,14 @@ export class RealTimeDataComponent implements OnInit, OnDestroy, OnChanges {
       if (dsIdSplit[1] == 'Raw') {
         this.timeSeriesDataSvc.getLatestRawData(dsIdSplit[0]).subscribe(response => {
           if (response.IsSuccess && response.Data.Values.length > 0) {
-            let dataRow = {};
-            dataRow[this.indexColName] = response.Data.Time;
-            dataRow[dataSourceId] = response.Data.Values;
-            this.dataSource.push(dataRow);
-            this.table.renderRows();
+            this.dataReceived(response.Data, dataSourceId);
           } else {
             this.logMessage(`${dataSourceId} does not have any realtime data yet`, 'Info');
           }
         });
       } else {
         this.timeSeriesDataSvc.getLatestAggrData(dsIdSplit[0], dsIdSplit[1]).subscribe(response => {
-          let dataRow = {};
-          dataRow[this.indexColName] = response.Data.Time;
-          dataRow[dataSourceId] = response.Data.Value;
-          this.dataSource.push(dataRow);
+          this.dataReceived(response.Data, dataSourceId);
         });
       }
 
@@ -151,6 +158,35 @@ export class RealTimeDataComponent implements OnInit, OnDestroy, OnChanges {
           this.logMessage(`Please try again later. Unable to stop subscription for ${dataSourceId}`, 'Info');
         }
       });
+    }
+  }
+
+  private dataReceived(data: SingleValueTimeSeries | MultiValueTimeSeries, dataSourceId: string) {
+    let indexExists: boolean = true;
+    let dataRow = this.dataSource.find(row => row[this.indexColName] == data.Time);
+    if (dataRow == undefined) {
+      dataRow = {};
+      dataRow[this.indexColName] = data.Time;
+      indexExists = false;
+    }
+    dataRow[dataSourceId] = this.getValue(data);
+    if (!indexExists) {
+      this.dataSource.push(dataRow);
+    }
+    if (this.dataSource.length > 10) {
+      this.dataSource.shift();
+    }
+
+    this.table.renderRows();
+  }
+
+  private getValue(data: SingleValueTimeSeries | MultiValueTimeSeries): string {
+    var mTimeSeries = data as MultiValueTimeSeries;
+
+    if (mTimeSeries.Values) {
+      return mTimeSeries.Values.toString();
+    } else {
+      return (data as SingleValueTimeSeries).Value.toString();
     }
   }
 

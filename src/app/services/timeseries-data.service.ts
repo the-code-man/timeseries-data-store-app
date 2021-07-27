@@ -2,7 +2,7 @@ import { HttpClient } from "@angular/common/http";
 import { Injectable } from "@angular/core";
 import { environment } from "src/environments/environment";
 import { ApiResponse } from "../model/api-response";
-import { AggrTimeSeries, RawTimeSeries } from "../model/time-series";
+import { SingleValueTimeSeries, MultiValueTimeSeries } from "../model/time-series";
 
 @Injectable({
     providedIn: 'root',
@@ -22,10 +22,10 @@ export class TimeSeriesDataService {
     }
 
     getLatestRawData(source: string) {
-        return this.http.get<ApiResponse<RawTimeSeries>>(`${this.readAPI}/${source}/getlatest`)
+        return this.http.get<ApiResponse<MultiValueTimeSeries>>(`${this.readAPI}/${source}/getlatest`)
     }
 
     getLatestAggrData(source: string, aggregationType: string) {
-        return this.http.get<ApiResponse<AggrTimeSeries>>(`${this.aggrReadAPI}/${source}/getlatest?aggregationType=${aggregationType}`)
+        return this.http.get<ApiResponse<SingleValueTimeSeries>>(`${this.aggrReadAPI}/${source}/getlatest?aggregationType=${aggregationType}`)
     }
 }

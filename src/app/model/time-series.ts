@@ -1,16 +1,21 @@
-export interface RawTimeSeries {
+export interface MultiValueTimeSeries {
     Time: Date;
     Values: number[];
 }
 
-export interface AggrTimeSeries {
+export interface SingleValueTimeSeries {
     Time: Date;
     Value: number;
 }
 
-export enum AggregationType
-{
-    Raw = 0,
+export interface RealtimeEvent {
+    Source: string;
+    AggrType: AggregationType;
+    Data: MultiValueTimeSeries[];
+}
+
+export enum AggregationType {
+    Raw,
     Avg,
     Min,
     Max
