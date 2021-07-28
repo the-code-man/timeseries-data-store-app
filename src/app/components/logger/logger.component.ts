@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, OnDestroy, OnInit, SimpleChanges } from '@angular/core';
+import { Component, ElementRef, Input, OnChanges, OnDestroy, OnInit, SimpleChanges, ViewChild } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { LogMessage, LOG_MESSAGE_SEPERATOR } from 'src/app/model/log-message';
 import { RealTimeDataService } from 'src/app/services/realtime-data.service';
@@ -12,7 +12,10 @@ export class LoggerComponent implements OnInit, OnChanges, OnDestroy {
   private newLogMessageSub: Subscription;
   @Input() message: LogMessage;
 
+  @ViewChild('txtLogMessage') txtLogMessage: ElementRef;
+
   internalMessage: string = '';
+  scrolltop: number = null;
 
   constructor(private realTimeDataSvc: RealTimeDataService) {
     this.logMessage(
@@ -43,5 +46,9 @@ export class LoggerComponent implements OnInit, OnChanges, OnDestroy {
     }
 
     this.internalMessage += `${message.messageType} ${LOG_MESSAGE_SEPERATOR} ${message.component} ${LOG_MESSAGE_SEPERATOR} ${message.message}`;
+
+    if (this.txtLogMessage) {
+      this.scrolltop = this.txtLogMessage.nativeElement.scrollHeight + 10;
+    }
   }
 }
